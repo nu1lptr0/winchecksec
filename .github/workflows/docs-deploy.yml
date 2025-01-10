@@ -6,24 +6,32 @@ on:
       - master
 
 jobs:
-  docs:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-        with:
-          submodules: true
+      - uses: actions/checkout@v3
 
-      - name: deps
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y doxygen graphviz
-      - name: docs
-        run: make doc
+      - name: Install Doxygen
+        run: sudo apt-get update && sudo apt-get install -y doxygen graphviz
 
-      - name: deploy
-        uses: peaceiris/actions-gh-pages@v3.6.1
+      - name: Generate Documentation
+        run: doxygen Doxyfile
+
+      - name: upload docs artifact
+        uses: actions/upload-pages-artifact@v1
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./doc/html
-          publish_branch: gh-pages
-          force_orphan: true
+          path: ./doc/html/
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      # NOTE: Needed to push to the repository.
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v2
